@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -10,8 +11,8 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-const filePath = path.join(__dirname, "una.docx");
-const tempDir = "./temp_extract";
+const filePath = path.resolve(process.env.DOCX_FILE || "./una.docx");
+const tempDir = path.resolve(process.env.TEMP_DIR || "./temp_extract");
 
 app.get("/", (req, res) => {
   res.send(`
@@ -32,6 +33,10 @@ app.post("/replace", async (req, res) => {
   const { replacementEmail, replacementDatum, replacementUna } = req.body;
 
   try {
+    if (!replacementEmail || !replacementDatum || !replacementUna) {
+      return res.status(400).send("All fields are required.");
+    }
+
     // Step 1: Extract the .docx file
     fs.createReadStream(filePath)
       .pipe(unzipper.Extract({ path: tempDir }))
@@ -104,7 +109,7 @@ app.post("/replace", async (req, res) => {
         });
 
         // Step 3: Repack the modified Word document
-        const modifiedDocxPath = path.join(__dirname, "una_modified.docx");
+        const modifiedDocxPath = path.resolve("./una_modified.docx");
         const output = fs.createWriteStream(modifiedDocxPath);
         const archive = archiver("zip", { zlib: { level: 9 } });
 
@@ -114,7 +119,7 @@ app.post("/replace", async (req, res) => {
         console.log("Modified .docx file saved.");
 
         // Step 4: Convert the modified .docx to PDF using LibreOffice
-        const pdfPath = path.join(__dirname, "una_modified.pdf");
+        const pdfPath = path.resolve("./una_modified.pdf");
         const libreOfficeCommand = `libreoffice --headless --convert-to pdf --outdir "${path.dirname(
           pdfPath
         )}" "${modifiedDocxPath}"`;
@@ -142,7 +147,7 @@ app.post("/replace", async (req, res) => {
   }
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
