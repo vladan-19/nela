@@ -1,0 +1,108 @@
+const express = require('express');
+const fs = require('fs');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const unzipper = require('unzipper');
+const zip = require('jszip');
+const bodyParser = require('body-parser');
+
+const app = express();
+const port = 3000;
+
+const filePath = './una.docx'; // Putanja do vašeg Word dokumenta
+
+// Postavljanje middleware-a
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static('public'));
+
+// Funkcija za ekstrakciju zaglavlja iz Word dokumenta
+function extractHeaders(docxPath) {
+    return new Promise((resolve, reject) => {
+        let headerData = '';
+        fs.createReadStream(docxPath)
+            .pipe(unzipper.Parse())
+            .on('entry', function (entry) {
+                if (entry.path.startsWith('word/header')) {
+                    entry.on('data', (chunk) => {
+                        headerData += chunk.toString();
+                    });
+                    entry.on('end', () => {
+                        const xmlDoc = new DOMParser().parseFromString(headerData, 'text/xml');
+                        const textNodes = xmlDoc.getElementsByTagName('w:t'); // Uzimamo tekstualne čvorove iz Word fajla
+                        const headerContent = Array.from(textNodes).map((node) => node.textContent).join(' ');
+                        resolve(headerContent);
+                    });
+                } else {
+                    entry.autodrain();
+                }
+            })
+            .on('error', (err) => {
+                reject('Greška prilikom čitanja dokumenta: ' + err);
+            });
+    });
+}
+
+// Funkcija za zamenu reči u zaglavlju
+function replaceWordsInHeader(docxPath, oldText, newText) {
+    return new Promise((resolve, reject) => {
+        zip.loadAsync(fs.readFileSync(docxPath)).then((docx) => {
+            const headerFilePath = 'word/header1.xml'; // Pretpostavljamo da je ovo fajl sa zaglavljem
+            docx.file(headerFilePath).async('string').then((oldHeader) => {
+                const updatedHeader = oldHeader.replace(new RegExp(oldText, 'g'), newText);
+                docx.file(headerFilePath, updatedHeader);
+                docx.generateNodeStream({ type: 'nodebuffer', streamFiles: true })
+                    .pipe(fs.createWriteStream('./izmenjeni_una.docx')); // Kreiramo izmenjeni dokument
+                resolve('Zamena uspešna!');
+            }).catch(reject);
+        }).catch(reject);
+    });
+}
+
+// Rute
+app.get('/', async (req, res) => {
+    try {
+        const headerContent = await extractHeaders(filePath);
+        res.send(`
+            <html>
+            <body>
+                <h1>Reči u zaglavlju:</h1>
+                <p>${headerContent}</p>
+                <form method="POST" action="/replace">
+                    <label for="oldEmail">Reč za zamenu (email):</label>
+                    <input type="text" id="oldEmail" name="oldEmail" value="email"><br><br>
+
+                    <label for="newEmail">Nova reč za email:</label>
+                    <input type="text" id="newEmail" name="newEmail"><br><br>
+
+                    <label for="oldDate">Reč za zamenu (datum):</label>
+                    <input type="text" id="oldDate" name="oldDate" value="datum"><br><br>
+
+                    <label for="newDate">Nova reč za datum:</label>
+                    <input type="text" id="newDate" name="newDate"><br><br>
+
+                    <input type="submit" value="Zameni">
+                </form>
+            </body>
+            </html>
+        `);
+    } catch (error) {
+        res.status(500).send('Greška: ' + error);
+    }
+});
+
+app.post('/replace', async (req, res) => {
+    const { oldEmail, newEmail, oldDate, newDate } = req.body;
+
+    try {
+        await replaceWordsInHeader(filePath, oldEmail, newEmail);
+        await replaceWordsInHeader(filePath, oldDate, newDate);
+        res.send('<h1>Zamena uspešna!</h1><p><a href="/">Povratak na početnu stranu</a></p>');
+    } catch (error) {
+        res.status(500).send('Greška: ' + error);
+    }
+});
+
+// Pokretanje servera
+app.listen(port, () => {
+    console.log(`Server pokrenut na http://localhost:${port}`);
+});
+
