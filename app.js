@@ -118,9 +118,10 @@ app.post("/replace", async (req, res) => {
         await archive.finalize();
         console.log("Modified .docx file saved.");
 
-        // Step 4: Convert the modified .docx to PDF using LibreOffice
+        // Step 4: Convert the modified .docx to PDF using LibreOffice AppImage
         const pdfPath = path.resolve("./una_modified.pdf");
-        const libreOfficeCommand = `libreoffice --headless --convert-to pdf --outdir "${path.dirname(
+        const libreOfficePath = path.resolve("./LibreOffice-fresh.basic-x86_64.AppImage");
+        const libreOfficeCommand = `${libreOfficePath} --headless --convert-to pdf --outdir "${path.dirname(
           pdfPath
         )}" "${modifiedDocxPath}"`;
 

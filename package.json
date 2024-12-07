@@ -1,32 +1,30 @@
 {
   "name": "word-reader",
   "version": "1.0.0",
+  "description": "A Node.js app for editing and converting DOCX files to PDF.",
   "main": "app.js",
   "scripts": {
+    "start": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["docx", "pdf", "libreoffice", "nodejs"],
+  "author": "Your Name",
   "license": "ISC",
   "dependencies": {
     "@xmldom/xmldom": "^0.9.6",
     "archiver": "^7.0.1",
     "body-parser": "^1.20.3",
-    "docx": "^9.1.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "fs": "^0.0.1-security",
     "he": "^1.2.0",
     "html-docx-js": "^0.3.1",
     "html-to-docx": "^1.8.0",
     "jszip": "^3.10.1",
     "mammoth": "^1.8.0",
-    "path": "^0.12.7",
     "sanitize-html": "^2.13.1",
     "unzipper": "^0.12.3",
     "word-extractor": "^1.0.4",
-    "xml2js": "^0.6.2",
-    "xmldom": "^0.6.0"
-  },
-  "description": ""
+    "xml2js": "^0.6.2"
+  }
 }
+
